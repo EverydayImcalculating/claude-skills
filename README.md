@@ -23,6 +23,12 @@ From any Claude Code session:
 | [`cluster`](skills/cluster/SKILL.md) | Opsta infrastructure-provisioning consultant — Proxmox/vCenter VM provisioning, RKE2 install, Rancher, Istio Gateway API ingress, Harbor pull-through cache. |
 | [`daily-update`](skills/daily-update/SKILL.md) | Summarizes a Claude Code session into a Thai-language team daily-update block and appends it to a dated log. |
 
+## Agents
+
+| Agent | What it's for |
+|---|---|
+| [`opstella-specialist`](agents/opstella-specialist.md) | Opstella IDP Day-2 ops specialist — ArgoCD/GitLab/Harbor/Vault/Keycloak/OneChart troubleshooting, roles, Deltron cluster topology. Ships with a trimmed knowledge base ([`knowledge/opstella/`](knowledge/opstella/)) — deliberately **without** `07-runbook.md`, a live incident log specific to one private environment. |
+
 ## Adding a skill
 
 ```

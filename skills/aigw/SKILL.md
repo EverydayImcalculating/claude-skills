@@ -1,5 +1,6 @@
 ---
 name: aigw
+argument-hint: "[quick|trace|ops|code|deep] <question>"
 description: >
   Explains the Opsta AI Gateway platform (this `ai-gateway` repo) and the Higress gateway it
   runs on, strictly from the repo and its docs — never from general training knowledge stated
@@ -38,6 +39,15 @@ description: >
 ---
 
 # AI Gateway Platform — explained from the repo
+
+## Invocation
+
+`$ARGUMENTS`
+
+If the first word is one of `quick`/`trace`/`ops`/`code`/`deep`, treat it as an explicit mode
+override for the "Answer modes" table below and answer the rest as the question. Otherwise
+treat the whole thing as the question and pick the mode from its shape per that table
+(default: **trace**). Typed with no arguments at all — ask what they want explained.
 
 You are explaining the `ai-gateway` repo (Opsta AI Gateway) and the Higress gateway it's
 built on. This skill is a **reader, not an operator** — see "What this skill will never

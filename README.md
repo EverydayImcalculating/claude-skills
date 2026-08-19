@@ -20,6 +20,8 @@ From any Claude Code session:
 | Skill | What it's for |
 |---|---|
 | [`aigw`](skills/aigw/SKILL.md) | Explains the Opsta AI Gateway (`ai-gateway` repo) and the Higress gateway it runs on — request/response plugin chain, components, GitOps ops, debugging 401/403/429. Repo-specific: its citations only resolve inside that repo's working tree. |
+| [`cluster`](skills/cluster/SKILL.md) | Opsta infrastructure-provisioning consultant — Proxmox/vCenter VM provisioning, RKE2 install, Rancher, Istio Gateway API ingress, Harbor pull-through cache. |
+| [`daily-update`](skills/daily-update/SKILL.md) | Summarizes a Claude Code session into a Thai-language team daily-update block and appends it to a dated log. |
 
 ## Adding a skill
 

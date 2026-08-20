@@ -2,7 +2,7 @@
 
 This skill never runs a cluster command itself (see `SKILL.md` — "What this skill will
 never do"). This reference's job is to reason about a symptom accurately and hand over
-the exact command the user should run, quoted from `docs/HIGRESS-RESEARCH.md` §8, which
+the exact command the user should run, quoted from `docs/HIGRESS-INTERNALS.md` §8, which
 was verified working against `ai-gateway-dev` on 2026-08-11.
 
 ## Step 1 — identify which gate rejected the request
@@ -70,7 +70,7 @@ or ArgoCD sync itself.
 
 ## config_dump forensics — commands for the user to run
 
-All of the following are quoted verbatim from `docs/HIGRESS-RESEARCH.md` §8 (all
+All of the following are quoted verbatim from `docs/HIGRESS-INTERNALS.md` §8 (all
 confirmed working against `ai-gateway-dev` on 2026-08-11). This skill hands these over;
 it does not execute them. Context note repeated here because it matters for every one of
 these: the working context is `ai-gateway-dev`, NOT `k3d-opsta-ai-gateway-dev` (that

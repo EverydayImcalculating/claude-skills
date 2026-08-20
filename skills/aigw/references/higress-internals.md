@@ -1,6 +1,6 @@
 # Higress internals
 
-Primary source for this file is `docs/HIGRESS-RESEARCH.md`, a living doc that was
+Primary source for this file is `docs/HIGRESS-INTERNALS.md`, a living doc that was
 verified against the live cluster on 2026-08-11 (its own §9 records exactly what was
 checked and what was corrected). Read `SKILL.md`'s source-of-truth ladder first — several
 facts below are corrections to an earlier, wrong understanding, and this file states the
@@ -16,32 +16,32 @@ Not written from scratch — an assembly of three existing projects:
 | Istio `pilot`/`discovery` | Istio's control plane | Reused as-is as the xDS config server |
 | Higress controller (`higress-core`) | Alibaba's own code | Translates Ingress/Gateway-API/Higress CRDs into Istio's internal config model |
 
-`docs/HIGRESS-RESEARCH.md:26-38`. No service mesh, no sidecars — Istio-without-the-mesh,
-aimed at north-south (ingress) traffic. Apache-2.0 (`docs/HIGRESS-RESEARCH.md:38`).
+`docs/HIGRESS-INTERNALS.md:26-38`. No service mesh, no sidecars — Istio-without-the-mesh,
+aimed at north-south (ingress) traffic. Apache-2.0 (`docs/HIGRESS-INTERNALS.md:38`).
 
 ## Control plane vs data plane
 
 Two Deployments, `higress-controller` and `higress-gateway`, in `higress-system`
-(`docs/HIGRESS-RESEARCH.md:105-114`).
+(`docs/HIGRESS-INTERNALS.md:105-114`).
 
 - **`higress-gateway` = Envoy.** Every client request enters here. Separate Deployment
   because it's the only thing on the hot path — scales and fails independently.
 - **`higress-controller` = 2 containers, verified live:**
   `higress-controller-866b675ff5-lms2k   higress-core,discovery   Running`
-  (`docs/HIGRESS-RESEARCH.md:142-158`). `higress-core` watches K8s objects and translates
+  (`docs/HIGRESS-INTERNALS.md:142-158`). `higress-core` watches K8s objects and translates
   them; `discovery` is Istio pilot, converting that into xDS resources and serving them
   over gRPC. Two containers, not one, because pilot is upstream Istio taken as-is —
   Higress didn't fork it, so it tracks Istio releases independently.
 
 **If the controller dies, the gateway keeps serving on its last-known xDS state.** You
-lose the ability to CHANGE routing, not to serve it — `docs/HIGRESS-RESEARCH.md:120-122`.
+lose the ability to CHANGE routing, not to serve it — `docs/HIGRESS-INTERNALS.md:120-122`.
 
 ## xDS — why this isn't a reload-based gateway
 
 xDS is the gRPC protocol Envoy uses to fetch config from a control plane instead of
 reading a file. Sub-protocols named for their payload: LDS (listeners), RDS (routes),
 CDS (clusters), EDS (endpoints), ECDS (extension config = Wasm plugins) —
-`docs/HIGRESS-RESEARCH.md:62-68`.
+`docs/HIGRESS-INTERNALS.md:62-68`.
 
 Key property: **push-based and hot.** The control plane pushes a delta over a persistent
 gRPC stream and Envoy reprograms itself in-process — no reload, no dropped connections, no
@@ -52,7 +52,7 @@ every ~30 seconds a viable design rather than a disruptive one.
 
 ## Envoy's four core objects
 
-`docs/HIGRESS-RESEARCH.md:53-60`, mapped to the nginx concept a DevOps reader likely
+`docs/HIGRESS-INTERNALS.md:53-60`, mapped to the nginx concept a DevOps reader likely
 already has:
 
 | Envoy term | Means | nginx analogy |
@@ -65,7 +65,7 @@ already has:
 ## The listener reality check — ~20 CR listeners, 2 real ones
 
 **Corrected fact — was wrong in an earlier draft of the repo's own docs, see
-`docs/HIGRESS-RESEARCH.md:168-179` and `:692`.** Our `Gateway` CR
+`docs/HIGRESS-INTERNALS.md:168-179` and `:692`.** Our `Gateway` CR
 (`charts/opsta-ai-gateway/templates/gateway.yaml`) declares one HTTP + one HTTPS listener
 for each of 8 hostnames — `api`, `grafana`, `console`, `auth`, `mcp`, `backup`,
 `seaweedfs` (labeled `swf` in the template), `argocd`, `vault`, `higress-console` — 9
@@ -74,7 +74,7 @@ enabled (`gateway.yaml:17-222`, confirmed by grepping `hostname:` occurrences in
 file).
 
 Envoy itself has exactly **2 physical listeners**: `0.0.0.0_80` and `0.0.0.0_443`
-(`docs/HIGRESS-RESEARCH.md:259-291`). A listener is a socket on a port, and there are
+(`docs/HIGRESS-INTERNALS.md:259-291`). A listener is a socket on a port, and there are
 only two ports. The named Gateway-API listeners collapse into **filter chains selected
 by TLS SNI** inside those two:
 
@@ -87,23 +87,23 @@ listener 0.0.0.0_443
 └── (one chain with NO server_names, and — critically — NO default_filter_chain)
 ```
 
-`docs/HIGRESS-RESEARCH.md:262-291`. `:80` listeners carry exactly one rule per chain:
+`docs/HIGRESS-INTERNALS.md:262-291`. `:80` listeners carry exactly one rule per chain:
 `RequestRedirect 301 → https`. HTTP never reaches application logic.
 
 **Consequence worth internalizing:** an unknown hostname matches no chain →
 **the TCP connection is dropped**, not answered with a 404. Symptom is `curl: (35) recv
 failure` or a connection reset, not an HTTP status. A 404 means TLS succeeded and route
 matching failed — different layer, different investigation
-(`docs/HIGRESS-RESEARCH.md:266-267`, and see Reveal #1 in `SKILL.md`).
+(`docs/HIGRESS-INTERNALS.md:266-267`, and see Reveal #1 in `SKILL.md`).
 
 ## The filter chain — where policy actually lives
 
 Within a chain, a request walks an ordered list of HTTP filters before the terminal
 router filter. Any filter may read, mutate, buffer, or short-circuit (return a response
 immediately, stopping the chain — the router filter and everything after never runs)
-(`docs/HIGRESS-RESEARCH.md:70-73`).
+(`docs/HIGRESS-INTERNALS.md:70-73`).
 
-**Live-verified ordering** (`docs/HIGRESS-RESEARCH.md:293-334`, captured from
+**Live-verified ordering** (`docs/HIGRESS-INTERNALS.md:293-334`, captured from
 `config_dump` on 2026-08-11) — note that native Envoy filters bracket and separate the
 Wasm ones, which is what "phase" concretely means:
 
@@ -120,12 +120,12 @@ envoy.filters.http.custom_response / compressor / cors     ← native, always fi
 `AUTHN` literally, physically means "runs before the native `rbac`/`local_ratelimit`
 filters" — not an abstract label. A `WasmPlugin`'s default-phase status reads as
 `UNSPECIFIED_PHASE` in `kubectl -o yaml`, never `DEFAULT`
-(`docs/HIGRESS-RESEARCH.md:338-340`).
+(`docs/HIGRESS-INTERNALS.md:338-340`).
 
 **`*.internal` filters are Higress's own shipped defaults**, distinct from ours — e.g.
 `key-auth`(1000, ours-configured) vs `key-auth.internal`(310, Higress's own unconfigured
 default). Both exist in the same live chain simultaneously
-(`docs/HIGRESS-RESEARCH.md:303,318,341-344`).
+(`docs/HIGRESS-INTERNALS.md:303,318,341-344`).
 
 ## proxy-wasm and the Wasm plugin delivery model
 
@@ -134,7 +134,7 @@ Envoy and the module: callbacks Envoy invokes (`onHttpRequestHeaders`,
 `onHttpRequestBody`, `onHttpResponseHeaders`, `onHttpResponseBody`,
 `onHttpStreamingResponseBody`), and host functions the module calls back into (get/set
 header, get/set body, `sendLocalResponse`, `httpCall`/cluster dispatch) —
-`docs/HIGRESS-RESEARCH.md:75-79`. This repo's own plugins are Go compiled to
+`docs/HIGRESS-INTERNALS.md:75-79`. This repo's own plugins are Go compiled to
 `GOOS=wasip1` (`plugins/`).
 
 Why Wasm over native filters or Lua: sandboxed (a plugin fault can't take down Envoy —
@@ -143,7 +143,7 @@ distributable as an **OCI artifact** — pushed to a registry with `oras`, refer
 `oci://registry/plugin:tag`, and **pulled by Envoy itself at runtime**, not by the
 kubelet. This is why a `WasmPlugin`'s `imagePullSecret` is a separate single-string field
 from a pod's normal `imagePullSecrets` — pod-level pull creds don't cover a fetch Envoy
-performs itself (`docs/HIGRESS-RESEARCH.md:220-222`).
+performs itself (`docs/HIGRESS-INTERNALS.md:220-222`).
 
 **The sandbox is not absolute.** A masking rule with `type=replace` + `restore=false`
 runs an unguarded fancy-regex path that can panic and abort the whole Wasm VM (a 503) if
@@ -152,7 +152,7 @@ a pattern hits a backtracking limit — see the `%{HOSTNAME}` grok note in
 
 ## The WasmPlugin CRD fields that matter
 
-`docs/HIGRESS-RESEARCH.md:211-222`:
+`docs/HIGRESS-INTERNALS.md:211-222`:
 
 - **`url`** — `oci://…`, fetched by the gateway itself (see above)
 - **`phase`** — coarse chain position; `AUTHN` runs before the default phase. Semantic,
@@ -166,7 +166,7 @@ a pattern hits a backtracking limit — see the `%{HOSTNAME}` grok note in
 
 ## McpBridge — why a plugin can't just use Service DNS
 
-The chain of reasoning, in order (`docs/HIGRESS-RESEARCH.md` §5d, `:557-597`):
+The chain of reasoning, in order (`docs/HIGRESS-INTERNALS.md` §5d, `:557-597`):
 
 ```
 plugin needs Redis (or Qdrant, or Ollama, or our own control-plane)
@@ -203,13 +203,13 @@ something, that something needs an `McpBridge` entry.
 - `enableIstioAPI: true` (in `platform-values/higress.yaml`) gives ONLY the `EnvoyFilter`
   CRD — the raw "patch generated Envoy config directly" escape hatch — NOT
   `VirtualService`/`DestinationRule`, which an earlier draft of this repo's own docs
-  incorrectly claimed (`docs/HIGRESS-RESEARCH.md:168-179`). Treat `EnvoyFilter` as a last
+  incorrectly claimed (`docs/HIGRESS-INTERNALS.md:168-179`). Treat `EnvoyFilter` as a last
   resort — it matches on generated config *structure*, so it breaks silently across
   version bumps.
 
 ## Why Higress specifically (the rejected alternatives)
 
-`docs/HIGRESS-RESEARCH.md:224-236`:
+`docs/HIGRESS-INTERNALS.md:224-236`:
 
 | Option | Why not |
 |---|---|

@@ -61,13 +61,13 @@ reality in specific, named places, and getting the order wrong means confidently
 something false.
 
 ```
-1. docs/HIGRESS-RESEARCH.md §9 "Verified 2026-08-11" / "Corrected by that pass"
+1. docs/HIGRESS-INTERNALS.md §9 "Verified 2026-08-11" / "Corrected by that pass"
    → WINS over every other source, including docs/ARCHITECTURE.md.
      §9 records findings checked against the live cluster on 2026-08-11 and is the
      only channel through which runtime reality has entered this repo's documentation.
      Known, standing conflicts where §9 overrides ARCHITECTURE.md:
        - ai-data-masking: ARCHITECTURE.md:696-708 describes it as an always-on GLOBAL
-         PII floor. Reality (HIGRESS-RESEARCH.md:349-357, confirmed live in
+         PII floor. Reality (HIGRESS-INTERNALS.md:349-357, confirmed live in
          charts/opsta-ai-gateway/values.yaml:357 `enabled: false`): it is OFF by
          default and not deployed. Upstream 2.0.0 truncates streaming responses that
          contain reasoning_content + tool_calls, breaking tool-calling for every
@@ -76,10 +76,10 @@ something false.
        - Envoy listener count: the Gateway CR declares ~20 named listeners
          (charts/opsta-ai-gateway/templates/gateway.yaml has 20 `hostname:`
          entries), but Envoy itself has exactly 2 physical listeners (0.0.0.0_80,
-         0.0.0.0_443) — HIGRESS-RESEARCH.md:260-291. The 20 collapse into per-hostname
+         0.0.0.0_443) — HIGRESS-INTERNALS.md:260-291. The 20 collapse into per-hostname
          SNI-matched filter chains inside those two.
        - enableIstioAPI:true (platform-values/higress.yaml) gives ONLY the
-         EnvoyFilter CRD, not VirtualService/DestinationRule — HIGRESS-RESEARCH.md:169-179.
+         EnvoyFilter CRD, not VirtualService/DestinationRule — HIGRESS-INTERNALS.md:169-179.
 
 2. Repo source + config — version.yaml, charts/opsta-ai-gateway/, plugins/*/,
    components/*/, platform/values.yaml, config.yaml
@@ -100,11 +100,20 @@ something false.
    and MUST be explicitly labeled as such in the answer (e.g. "this is general Envoy
    behavior, not something I verified against this repo").
    → This repo pins Higress 2.2.3 and Gateway API v1.4.1, both with version-specific
-     behavior. HIGRESS-RESEARCH.md §9 logs multiple cases where confident general
+     behavior. HIGRESS-INTERNALS.md §9 logs multiple cases where confident general
      knowledge about Higress was flatly wrong on this exact cluster (the listener
      count and enableIstioAPI corrections above are both examples). Treat every
      "I already know how Higress works" instinct as unverified until checked.
 ```
+
+**If `docs/HIGRESS-INTERNALS.md` doesn't exist in this checkout** (it may not have been
+committed yet in every clone): say so explicitly before answering anything that would
+normally cite it. The three corrections above (ai-data-masking off-by-default, the 2-listener
+count, enableIstioAPI) are safe regardless — they're stated as facts in rung 1 itself, not
+just pointed at the file. For anything else rung 1 would normally cover, do NOT silently fall
+through to rung 3 (`ARCHITECTURE.md`) as if it were now authoritative — say the verification
+source is missing and answer from rung 2 (repo source) only, flagging rung-3 claims as
+unverified rather than trusted.
 
 ## What this skill will never do
 
@@ -114,14 +123,14 @@ something false.
 - **It MAY quote a command for the user to run themselves.** When a question can only be
   answered by live state ("is this actually running right now", "why is MY request
   failing"), say so plainly, and hand over the exact command from
-  `docs/HIGRESS-RESEARCH.md` §8 (all verified working as of 2026-08-11) — e.g. the
+  `docs/HIGRESS-INTERNALS.md` §8 (all verified working as of 2026-08-11) — e.g. the
   `config_dump` fetch, the filter-chain `jq` recipe, `get wasmplugin` with phase/priority
   columns. Never imply a docs-derived answer was checked live; say where it came from.
 - **Never apply, patch, restart, or otherwise mutate anything**, even if asked to "just
   fix it" — that's out of scope for a read/explain skill. Point to the feature-branch +
   spec-first workflow in this repo's CLAUDE.md instead.
 
-Context facts worth knowing before quoting any command (from `docs/HIGRESS-RESEARCH.md` §8):
+Context facts worth knowing before quoting any command (from `docs/HIGRESS-INTERNALS.md` §8):
 the working context is `ai-gateway-dev`, **not** `k3d-opsta-ai-gateway-dev` (that entry
 exists in kubeconfig but the connection refuses); always pass `--context` explicitly since
 the default context drifts between sessions; hostnames in this environment use a dash
@@ -154,15 +163,15 @@ project — must be re-verified against the live file, every time, because those
 - **Higress = unmodified Envoy (data plane) + Istio's `pilot`/`discovery` taken as-is
   (the xDS control plane) + Alibaba's own controller (`higress-core`, translates
   Ingress/Gateway-API/Higress CRDs into Istio's config model)** — no service mesh, no
-  sidecars, pointed at north-south traffic only. `docs/HIGRESS-RESEARCH.md:21-39`.
+  sidecars, pointed at north-south traffic only. `docs/HIGRESS-INTERNALS.md:21-39`.
 - **If the Higress control plane (the `higress-controller` pod) dies, traffic keeps
   being served** on Envoy's last-known xDS state. You lose the ability to change
-  routing, not the ability to serve it. `docs/HIGRESS-RESEARCH.md:120-122`.
+  routing, not the ability to serve it. `docs/HIGRESS-INTERNALS.md:120-122`.
 - **AUTHN phase runs entirely before the default (`UNSPECIFIED_PHASE`) phase.** Within
   a phase, **higher `priority` runs first** — this is the opposite of what "priority"
   usually means and trips people up. A plugin's default-phase status shows as
   `UNSPECIFIED_PHASE` in `kubectl get wasmplugin -o yaml`, never `DEFAULT`.
-  `docs/HIGRESS-RESEARCH.md:213-219`.
+  `docs/HIGRESS-INTERNALS.md:213-219`.
 - **`x-mse-consumer` is the tenant key everything downstream reads.** `key-auth` sets it
   after resolving the caller's API key to a named consumer
   (`charts/opsta-ai-gateway/templates/wasmplugins.yaml:17-58`); every plugin after it in
@@ -176,7 +185,7 @@ project — must be re-verified against the live file, every time, because those
   `ingress`, `routeType`. This single limitation is why every one of our tenant-aware
   plugins carries a config map keyed by consumer (`consumers{}`, `consumer_patterns{}`,
   `consumer_groups{}`, `tenants{}`) instead of being one plugin instance per tenant —
-  see Reveal #4 below, and `docs/HIGRESS-RESEARCH.md` §5b (`:506-520`).
+  see Reveal #4 below, and `docs/HIGRESS-INTERNALS.md` §5b (`:506-520`).
 - **A Wasm plugin cannot open a raw socket** — the proxy-wasm sandbox has no syscalls.
   Anything a plugin needs to reach (Redis, Qdrant, Ollama, or even our own
   control-plane) must be registered as an Envoy cluster via an `McpBridge` CR; the
@@ -184,7 +193,7 @@ project — must be re-verified against the live file, every time, because those
   (`charts/opsta-ai-gateway/templates/redis.yaml:18-52` registers the four the plugins
   use: `redis`, `control-plane`, `qdrant`, `ollama` — plus a dev-only `deepseek` PoC
   entry gated on `dev.deepseekPoc.enabled`), never by Kubernetes Service DNS.
-  `docs/HIGRESS-RESEARCH.md` §5d (`:557-597`).
+  `docs/HIGRESS-INTERNALS.md` §5d (`:557-597`).
 - **Two writers patch the same `WasmPlugin` object**: ArgoCD/Helm own the static
   baseline (image, phase, priority, global config); our control-plane's reconcile loop
   owns `.spec.matchRules` (the per-tenant content), patched from Postgres. Kept from
@@ -247,27 +256,27 @@ mode), or when someone wants the platform explained to a colleague. Each pairs a
 surprising fact with a rule that transfers beyond this specific repo.
 
 1. **~20 Gateway listeners collapse into 2 real Envoy listeners, chosen by TLS SNI, with
-   no default filter chain.** `docs/HIGRESS-RESEARCH.md:260-291`.
+   no default filter chain.** `docs/HIGRESS-INTERNALS.md:260-291`.
    → Transferable rule: **an unknown hostname is a connection RESET, not a 404.** A
    reset means TLS/SNI never matched; a 404 means TLS succeeded and routing failed.
    Different layer, different investigation.
 
 2. **An AI gateway's cost is written in the response body, not the request.**
    `ai-statistics`(900) reads the provider's `usage` block on the way back —
-   `docs/HIGRESS-RESEARCH.md` §5f (`:618-644`).
+   `docs/HIGRESS-INTERNALS.md` §5f (`:618-644`).
    → Transferable rule: metering direction determines architecture. A normal gateway
    counts requests; this one has to look at what came back before it knows what a
    request cost.
 
 3. **The Wasm sandbox has no socket.** No syscalls, no resolver — a plugin cannot dial
-   anything directly. `docs/HIGRESS-RESEARCH.md` §5d (`:563-566`).
+   anything directly. `docs/HIGRESS-INTERNALS.md` §5d (`:563-566`).
    → Transferable rule: capability constraints force the design, not preference. The
    `McpBridge` CR exists purely because Envoy, not the plugin, has to make the call —
    generalize it: any time a plugin must reach something, that something needs an
    `McpBridge` entry.
 
 4. **`WasmPlugin.matchRules` cannot select by the authenticated consumer.** THE
-   keystone constraint — `docs/HIGRESS-RESEARCH.md` §5b (`:506-520`).
+   keystone constraint — `docs/HIGRESS-INTERNALS.md` §5b (`:506-520`).
    → Transferable rule: find your tool's hard constraint and design around it,
    deliberately, rather than fighting it piecemeal. Nearly every "why does this plugin
    have a `consumers{}` map instead of N separate plugin instances" question traces
@@ -291,7 +300,7 @@ list before finalizing any non-trivial answer.
 1. **Never state Higress/Envoy/Istio behavior from general knowledge without labeling
    it as such.** It's version-specific, and this repo's own docs record multiple cases
    where confident general knowledge was wrong on this exact cluster.
-2. **Never trust `docs/ARCHITECTURE.md` over `docs/HIGRESS-RESEARCH.md` §9** on any
+2. **Never trust `docs/ARCHITECTURE.md` over `docs/HIGRESS-INTERNALS.md` §9** on any
    point where §9 explicitly names a correction. The ladder above lists the known ones;
    there may be others — check §9 whenever ARCHITECTURE.md's claim feels load-bearing.
 3. **Never say "the plugin calls Redis" (or Qdrant, or Ollama, or the control-plane).**
@@ -301,7 +310,7 @@ list before finalizing any non-trivial answer.
    `components/control-plane/`. State which one, every time it's ambiguous.
 5. **Never conflate `key-auth` (1000, ours-configured) with `key-auth.internal` (310,
    Higress's own shipped default).** Both exist in the same live filter chain
-   (`docs/HIGRESS-RESEARCH.md:293-334`) — they are different filter instances.
+   (`docs/HIGRESS-INTERNALS.md:293-334`) — they are different filter instances.
 6. **Never write `api.<baseDomain>`** as if it's the literal hostname in this
    environment — it uses a dash separator (`api-ai-gateway-dev.opsta.in.th`). See the
    context facts under "What this skill will never do" above.

@@ -155,7 +155,7 @@ the last request-phase plugin before the router filter.
 
 Between `key-injector` (400) and the response-phase plugins, the AUTHN phase boundary
 passes (native `rbac`/`local_ratelimit` filters,
-`docs/HIGRESS-RESEARCH.md:319-321`), and then Envoy's own native
+`docs/HIGRESS-INTERNALS.md:319-321`), and then Envoy's own native
 **router filter** (`envoy.filters.http.router`) matches the request against an
 `HTTPRoute`, selects a cluster, and proxies to the upstream provider. This is not
 configurable via any `WasmPlugin` CR — see `references/higress-internals.md` for the

@@ -140,7 +140,7 @@ Redis, sessions are encrypted cookies, not server-side revocable
 `sk-…` API keys via `key-auth` on `/v1` (`docs/ARCHITECTURE.md:1026-1028`).
 
 To confirm: `kubectl -n opsta-keycloak get pods`, or check a specific user's group
-mapping via the Keycloak Admin REST API (see `docs/HIGRESS-RESEARCH.md` §8-adjacent
+mapping via the Keycloak Admin REST API (see `docs/HIGRESS-INTERNALS.md` §8-adjacent
 commands in `docs/DEV-ENVIRONMENT.md`).
 
 ## Observability

@@ -129,14 +129,90 @@ From `version.yaml:317-320`, built locally for e2e, skipped by the dev CI matrix
 The principle behind all three: `task test` should never depend on a real provider or a
 real IdP's uptime.
 
+## The 9 BUILT-IN plugins — mirrored, configured, never rewritten
+
+Distinct from the 15 above: these are **not our artifacts**. Authoritative list is
+`version.yaml:329-341` (`aiPlugins:`), duplicated for the chart at
+`charts/opsta-ai-gateway/values.yaml:648`. Nine, not eight — `ai-data-masking` belongs in
+this list and is easy to forget because it ships disabled.
+
+**How they get here.** Mirrored as OCI artifacts from the Alibaba registry
+(`higress-registry.cn-hangzhou.cr.aliyuncs.com/plugins`, `version.yaml:330`) into our own
+registry — `task images` runs
+`oras cp <source>/<name>:<tag> <registry.pull>/ai-gateway-plugins/<name>:<tag>`
+(`version.yaml:324-326`), and the `WasmPlugin` CRs reference the **mirror**, so nothing
+reaches cn-hangzhou at runtime. Supply-chain decision, not a convenience one.
+
+**Tag `2.0.0`** (`version.yaml:331`) — and read the comment above it
+(`version.yaml:327-328`): that's the tag the Higress console catalog pins, **NOT** the
+plugins' internal `1.0.0` VERSION files. Anyone browsing upstream by VERSION file will
+pick the wrong source.
+
+| Built-in | Rendered by | Job | Source of its config |
+|---|---|---|---|
+| `key-auth` | chart | API key → `x-mse-consumer` | `wasmplugins.yaml`, `consumers[]` from reconcile |
+| `ai-statistics` | chart | usage → Prometheus token metrics | `wasmplugins.yaml` |
+| `ai-quota` | chart | 403 over USD-derived token balance | `wasmplugins.yaml`; balance from `budget-controller` |
+| `ai-token-ratelimit` | chart | 429 over tokens/minute | `wasmplugins.yaml`; bindings from reconcile |
+| `model-router` | chart | body `model` → `x-higress-llm-model` | `wasmplugins.yaml` |
+| `ai-data-masking` | chart | PII mask/deny, request+response | `values.yaml:346-360` — **`enabled: false`** |
+| `ai-proxy` | **control-plane** | native provider protocol translation | `egress.go` `aiProxyPluginSpec` + `aiproxy.go` `aiProxyMatchRulesFor` |
+| `mcp-server` | **control-plane** | MCP proxy; exists only while ≥1 server registered | `reconcile.go` `applyMcpServerPlugin` |
+| `request-block` | **control-plane** | AI kill-switch (503) from suspended scopes | `reconcile.go` `reconcileKillSwitch` |
+
+The last three have **no static priority to cite** — they aren't in `wasmplugins.yaml` at
+all, and their lifecycle (created AND deleted) is owned by our control-plane, not ArgoCD.
+That's the sharpest form of Reveal #5: for these, the reconcile loop owns the whole object,
+not just `.spec.matchRules`.
+
+**`ai-data-masking` is off by default and this is deliberate** —
+`charts/opsta-ai-gateway/values.yaml:347-357`. The upstream 2.0.0 plugin truncates any
+streaming response containing `reasoning_content` + `tool_calls`: it buffers the body to
+mask PII, chokes on the reasoning→tool-call transition, and drops both the `tool_calls` and
+the final `finish_reason` — breaking tool-calling for every streaming agentic client
+(opencode, Cursor, …). It has no config to skip response/streaming masking and can't run
+request-only, so it's all-or-nothing. Off until upstream ships a streaming-safe version.
+See the ladder in `SKILL.md` — this is the single most common place a docs-only answer
+goes wrong.
+
+### Reading a built-in's internals
+
+None of these nine have source in this repo — only config. When a question needs the
+implementation ("how does key-auth actually look up a key", "what does ai-proxy send to
+Bedrock", "what's the full schema ai-quota accepts"), go upstream:
+
+```
+github.com/higress-group/higress → plugins/wasm-go/extensions/<name>/
+```
+
+pinned to the mirrored tag **`2.0.0`**, not `main`. Ladder rung 5 — read the rules in
+`SKILL.md` under "Upstream Higress source" before citing it. In short: label it "upstream
+source, not verified on our cluster", never present an upstream default as our behavior
+(we override throughout `values.yaml`), and if you can't fetch it, say so rather than
+reconstructing it.
+
+**Where upstream and ours meet: `ai-cache`.** It is in `plugins/` — ours, one of the 15 —
+but it's a **fork** of the upstream built-in, base and patch recorded in
+`plugins/ai-cache/UPSTREAM.md` and attributed at `plugins/ai-cache/go.mod:1` to
+`github.com/alibaba/higress/plugins/wasm-go/extensions/ai-cache` (Apache-2.0). Note the
+repo's own attribution uses the `alibaba/higress` coordinate — quote that when citing the
+fork base. `UPSTREAM.md` states the reason to fork: stock `ai-cache` has a flat static
+`cacheKeyPrefix` and a static `collectionID` baked into all Qdrant URLs, with no
+per-consumer dimension and no search filter, so a front-wrapper could namespace the Redis
+key but never isolate the semantic vector store — tenant isolation had to move inside the
+plugin. Reveal #4 again, in its most expensive form: the constraint cost us a fork.
+
+This is the highest-value upstream use in general — **diff, don't describe**. "Upstream
+defaults X, we set Y, here's why" is an answer; "upstream does X" alone is a guess about
+our cluster.
+
 ## What was deliberately NOT built here
 
 Worth stating alongside the inventory, because each is its own small decision:
 
-- `key-auth`, `ai-statistics`, `ai-quota`, `ai-token-ratelimit`, `model-router`,
-  `ai-proxy`, `mcp-server`, `request-block` — Higress/Alibaba built-ins, mirrored into
-  this repo's own registry (`oras cp`, so nothing depends on reaching the upstream
-  registry at runtime), configured by our chart. Not rewritten.
+- The nine built-ins above — mirrored and configured, not rewritten. See that section for
+  why each was kept rather than replaced (and `model-allowlist` / `prompt-guard` above for
+  the two cases where a built-in was evaluated and rejected).
 - Every Deployment/Service/Ingress for THIS repo's own workloads is meant to come from
   opsta's OneChart, not a hand-rolled template — see this repo's CLAUDE.md rule on
   OneChart. Existing bespoke chart templates for `control-plane`/`console` predate that

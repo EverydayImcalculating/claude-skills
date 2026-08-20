@@ -221,3 +221,33 @@ something, that something needs an `McpBridge` entry.
 
 Higress wins on the intersection: Apache-2.0, Envoy-grade data plane, Gateway-API
 native, AND a prebuilt AI plugin catalog. The catalog is the deciding factor.
+
+## Reading upstream source when this repo has none
+
+Everything above is repo- and cluster-verified. When a question goes past what this repo
+contains — the internals of a built-in plugin, the proxy-wasm host functions, the
+controller's CRD→Istio translation — the source is upstream
+`github.com/higress-group/higress`, plus the two SDKs our plugins genuinely import:
+
+```
+github.com/higress-group/proxy-wasm-go-sdk   the proxy-wasm ABI binding
+github.com/higress-group/wasm-go             the `wrapper` layer (ParseConfig,
+                                             ProcessRequestHeaders, NewClusterClient)
+```
+
+Both appear as real `require` entries in every `plugins/*/go.mod`, so their pinned
+pseudo-versions are checkable in-repo — that is the honest way to answer "which SDK
+revision are we on".
+
+Upstream is **ladder rung 5**, below everything in this file. Rules that matter, in full
+under "Upstream Higress source" in `SKILL.md`:
+
+- Pin to our tested matrix — chart `2.2.3`, AI plugin OCI tag `2.0.0` (`version.yaml`).
+  Never `main`.
+- Never present an upstream default as our behavior. We override defaults throughout
+  `charts/opsta-ai-gateway/values.yaml`, and `ai-cache` is a patched fork
+  (`plugins/ai-cache/UPSTREAM.md`).
+- Label it: "upstream source, not verified on our cluster."
+- The repo's own fork attribution says `github.com/alibaba/higress`
+  (`plugins/ai-cache/go.mod:1`) — quote that when citing a fork base rather than
+  substituting the `higress-group` coordinate.

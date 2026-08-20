@@ -29,7 +29,13 @@ point in the chain reads that header, never the raw key. 401 with body
 `No Key Authentication information found` if no match.
 
 This is a Higress built-in (mirrored, not vendored source) — its internal lookup
-implementation is not in this repo to cite. What IS verifiable: `consumers[]` in the CR is
+implementation is not in this repo to cite. For that, go upstream:
+`github.com/higress-group/higress` → `plugins/wasm-go/extensions/key-auth/`, pinned to our
+AI plugin tag `2.0.0` (`version.yaml:330-331`), and label it as upstream source rather
+than something verified here — see "Upstream Higress source" in `SKILL.md`. The same
+applies to every other built-in in the table: `ai-proxy`, `ai-statistics`, `ai-quota`,
+`ai-token-ratelimit`, `model-router`, `ai-data-masking`, `mcp-server`, `request-block`.
+What IS verifiable in-repo: `consumers[]` in the CR is
 a flat JSON array (see the shape at `wasmplugins.yaml:17-58`), but that describes the
 *config format*, not the runtime lookup structure — proxy-wasm convention (confirmed by
 every one of OUR plugins below) is to parse config once at `onPluginStart` into a Go map,

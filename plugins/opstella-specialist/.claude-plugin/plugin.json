@@ -1,0 +1,9 @@
+{
+  "name": "opstella-specialist",
+  "version": "0.1.0",
+  "description": "Opstella IDP Day-2 ops specialist — ArgoCD/GitLab/Harbor/Vault/Keycloak/OneChart troubleshooting, roles, Deltron cluster topology.",
+  "author": {
+    "name": "EverydayImcalculating"
+  },
+  "license": "MIT"
+}

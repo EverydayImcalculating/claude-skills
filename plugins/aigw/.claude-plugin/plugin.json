@@ -1,0 +1,10 @@
+{
+  "name": "aigw",
+  "version": "0.1.0",
+  "description": "Explains the Opsta AI Gateway (ai-gateway repo) and the Higress gateway it runs on, strictly from that repo and its docs.",
+  "author": {
+    "name": "EverydayImcalculating"
+  },
+  "license": "MIT",
+  "skills": "./skills/"
+}

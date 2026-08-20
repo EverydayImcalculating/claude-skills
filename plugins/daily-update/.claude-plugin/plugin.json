@@ -1,0 +1,10 @@
+{
+  "name": "daily-update",
+  "version": "0.1.0",
+  "description": "Summarizes a Claude Code session into a Thai-language team daily-update block and appends it to a dated log.",
+  "author": {
+    "name": "EverydayImcalculating"
+  },
+  "license": "MIT",
+  "skills": "./skills/"
+}

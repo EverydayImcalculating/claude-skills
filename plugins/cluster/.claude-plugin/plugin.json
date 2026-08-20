@@ -1,0 +1,10 @@
+{
+  "name": "cluster",
+  "version": "0.1.0",
+  "description": "Opsta infrastructure-provisioning consultant — Proxmox/vCenter VM provisioning, RKE2 install, Rancher, Istio Gateway API ingress, Harbor pull-through cache.",
+  "author": {
+    "name": "EverydayImcalculating"
+  },
+  "license": "MIT",
+  "skills": "./skills/"
+}

@@ -1,16 +1,34 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "claude-skills",
-  "description": "Personal Claude Code skills.",
+  "description": "Personal Claude Code skills, installable individually.",
   "owner": {
     "name": "EverydayImcalculating"
   },
   "plugins": [
     {
-      "name": "claude-skills",
-      "description": "Personal Claude Code skills, one per repo/domain.",
-      "source": "./",
+      "name": "aigw",
+      "description": "Explains the Opsta AI Gateway (ai-gateway repo) and the Higress gateway it runs on, strictly from that repo and its docs.",
+      "source": "./plugins/aigw",
+      "category": "documentation"
+    },
+    {
+      "name": "cluster",
+      "description": "Opsta infrastructure-provisioning consultant — Proxmox/vCenter, RKE2, Rancher, Istio Gateway API, Harbor.",
+      "source": "./plugins/cluster",
+      "category": "devops"
+    },
+    {
+      "name": "daily-update",
+      "description": "Summarizes a Claude Code session into a Thai-language team daily-update block.",
+      "source": "./plugins/daily-update",
       "category": "productivity"
+    },
+    {
+      "name": "opstella-specialist",
+      "description": "Opstella IDP Day-2 ops specialist agent, with a trimmed knowledge base.",
+      "source": "./plugins/opstella-specialist",
+      "category": "devops"
     }
   ]
 }
